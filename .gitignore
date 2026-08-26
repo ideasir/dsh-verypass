@@ -1,0 +1,18 @@
+node_modules/
+
+# Local credentials and runtime data
+.passpass.json
+.passpass.key
+.env
+.env.*
+!.env.example
+
+# Logs and local tooling
+*.log
+.DS_Store
+
+# Generated caches / temporary outputs
+.cache/
+.tmp/
+
+# Keep published build outputs tracked; lib/ and dist/ are intentionally excluded from this rule.
