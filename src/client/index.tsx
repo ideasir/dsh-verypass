@@ -523,7 +523,7 @@ function syncLockVisibility() {
 }
 
 // ── 设置页插件卡片（复用 dsh-mm-* CSS，与 makemake 完全一致） ─────────
-const VERSION = '0826-0.1.0-rc.2'
+const VERSION = '0828-0.1.0-rc.2'
 const REPO_URL = 'https://github.com/ideasir/dsh-passpass'
 
 // Chevron 用 primitives 的 IconChevronDownOutline14（与 makemake 一致）
@@ -598,10 +598,10 @@ function PassPassPluginCard() {
           background: 'var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary))',
           color: 'var(--dsw-alias-label-primary-inverted,#fff)',
           cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          transition: 'filter .12s, background .12s',
+          transition: 'filter .12s',
         } as any,
-        onMouseEnter: (e: any) => e.target.style.background = 'color-mix(in srgb, var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary)) 90%, #000)',
-        onMouseLeave: (e: any) => e.target.style.background = '',
+        onMouseEnter: (e: any) => e.target.style.filter = 'brightness(1.1)',
+        onMouseLeave: (e: any) => e.target.style.filter = '',
       },
         React.createElement('span', { dangerouslySetInnerHTML: { __html: LockSvg14 }, style: { display: 'inline-flex' } }),
         '打开密码本',

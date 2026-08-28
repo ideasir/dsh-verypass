@@ -81,7 +81,7 @@ export DSH_PASSPASS_KEY='<64 hexadecimal characters>'
 
 ## 版本
 
-当前版本：`0826-0.1.0-rc.2`
+当前版本：`0828-0.1.0-rc.2`
 
 项目地址：<https://github.com/ideasir/dsh-passpass>
 
