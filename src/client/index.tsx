@@ -692,7 +692,7 @@ function syncLockVisibility() {
 
 // ── 设置页插件卡片（复用 dsh-mm-* CSS，与 makemake 完全一致） ─────────
 const VERSION = '0901-0.1.2-alpha.3'
-const REPO_URL = 'https://for.very.im/EVAN/dsh-verypass'
+const REPO_URL = 'https://github.com/ideasir/dsh-verypass'
 
 // Chevron 用 primitives 的 IconChevronDownOutline14（与 makemake 一致）
 // Lock SVG（DSH 风格，stroke-width=1.5 匹配 primitives）
