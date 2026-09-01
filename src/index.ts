@@ -280,17 +280,32 @@ export function apply(ctx: any, config: any = {}) {
             seen.add(variable)
             const old = previousByVariable.get(variable)
             // value 缺失时保留服务端已有明文；仅新增条目必须明确提交 value。
-            const value = typeof raw.value === 'string' ? raw.value : old?.value
-            if (typeof value !== 'string' || !value) continue
-            secrets.push({
-              name,
-              project: typeof raw.project === 'string' ? raw.project.trim() : (old?.project || ''),
-              variable,
-              prefix: typeof raw.prefix === 'string' ? raw.prefix.trim() : (old?.prefix || ''),
-              value,
-              note: typeof raw.note === 'string' ? raw.note : '',
-              createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : old?.createdAt || '',
-            })
+            const rawValue = typeof raw.value === 'string' ? raw.value : old?.value
+            if (typeof rawValue !== 'string' || !rawValue) continue
+            // 多行 value 自动拆分为多条独立条目
+            const values = rawValue.split(/\r?\n/).map(v => v.trim()).filter(Boolean)
+            for (let vi = 0; vi < values.length; vi++) {
+              const val = values[vi]
+              const entryName = values.length > 1 ? `${name} ${vi + 1}` : name
+              // 多行拆分时变量名自动续编
+              let entryVar = variable
+              if (values.length > 1) {
+                let n = 1
+                while (seen.has(`${entryVar}_${String(n).padStart(2, '0')}`)) n++
+                entryVar = `${entryVar}_${String(n).padStart(2, '0')}`
+              }
+              if (seen.has(entryVar)) continue
+              seen.add(entryVar)
+              secrets.push({
+                name: entryName,
+                project: typeof raw.project === 'string' ? raw.project.trim() : (old?.project || ''),
+                variable: entryVar,
+                prefix: typeof raw.prefix === 'string' ? raw.prefix.trim() : (old?.prefix || ''),
+                value: val,
+                note: typeof raw.note === 'string' ? raw.note : '',
+                createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : old?.createdAt || '',
+              })
+            }
           }
           const clean: VaultData = { enabled: !!data.enabled, secrets }
           await saveData(clean)

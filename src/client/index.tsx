@@ -219,13 +219,19 @@ function renderVaultListHtml(): string {
     const idx = secretsData.secrets.indexOf(head)
     return `<div class="dsh-verypass-row" data-project="${escapeHtml(g.project)}" data-index="${idx}">
       <div class="dsh-verypass-row-main">
-        <span class="dsh-verypass-row-name">${escapeHtml(g.project)}${multi ? ` <span class="dsh-verypass-keycount">${g.entries.length} Key</span>` : ''}</span>
+        <div class="dsh-verypass-row-header">
+          <span class="dsh-verypass-row-name">${escapeHtml(g.project)}</span>
+          ${multi ? `<span class="dsh-verypass-keycount">${g.entries.length} Key</span>` : ''}
+        </div>
         <div class="dsh-verypass-row-meta">
           <code>${escapeHtml(head.variable)}</code>
-          ${multi ? `<button class="dsh-verypass-btn dsh-verypass-varlist" data-action="varlist" data-project="${escapeHtml(g.project)}" title="查看该项目全部变量与 Key">${ListSvg}</button>` : ''}
           <span class="dsh-verypass-row-val">${masked}</span>
           ${head.note ? `<span class="dsh-verypass-row-note">${escapeHtml(notePreview)}</span>` : ''}
         </div>
+        ${multi ? `<button class="dsh-verypass-varlist-btn" data-action="varlist" data-project="${escapeHtml(g.project)}">
+          ${ListSvg.replace('width="12" height="12"', 'width="14" height="14"')}
+          查看全部变量与 Key
+        </button>` : ''}
       </div>
       <div class="dsh-verypass-row-actions">
         <button class="dsh-verypass-btn" data-action="copy" data-index="${idx}" title="复制明文">${CopySvg}</button>
@@ -396,8 +402,8 @@ function openEditModal(editIdx: number | null, overlay: HTMLElement) {
       <input class="dsh-verypass-input" data-field="name" value="${escapeHtml(entry.name)}" placeholder="如：Agnes 密钥 1" />
       <label>变量名（用于工具调用，唯一；留空自动生成）</label>
       <input class="dsh-verypass-input" data-field="variable" value="${escapeHtml(entry.variable)}" placeholder="留空则自动生成，如：AGNES_KEY_01" />
-      <label>值（真实密钥）</label>
-      <input class="dsh-verypass-input" data-field="value" type="password" value="${escapeHtml(entry.value)}" placeholder="输入密钥内容" />
+      <label>值（粘贴多行 Key 时自动创建多条，每行一个密钥）</label>
+      <textarea class="dsh-verypass-textarea" data-field="value" rows="3" placeholder="支持多行粘贴，每行一个密钥&#10;如：sk-111111111111111&#10;sk-222222222222222&#10;sk-333333333333333">${escapeHtml(entry.value)}</textarea>
       <label>备注（配合信息：用户名/地址/端口/用途）</label>
       <textarea class="dsh-verypass-textarea" data-field="note" placeholder="如：Agnes API 多 Key 池，换行轮询备用">${escapeHtml(entry.note)}</textarea>
     </div>
@@ -451,16 +457,26 @@ function openEditModal(editIdx: number | null, overlay: HTMLElement) {
   const submit = () => {
     const form = readForm()
     const name = form.name
-    if (!name || !form.value) { alert('名字、值不能为空'); return }
-    const variable = genVariable(form)
     const project = form.project
-    const existing = secretsData.secrets.find((s, i) => s.variable === variable && i !== editIdx)
-    if (existing) { alert(`变量名「${variable}」已存在，请换一个名字或手动填写变量名`); return }
+    // 值按行拆分：多行=多条 Key 批量创建（编辑模式保持单条）
+    const rawValues = isEdit ? [form.value] : form.value.split(/\r?\n/).map(v => v.trim()).filter(Boolean)
+    if (!name) { alert('名字不能为空'); return }
+    if (rawValues.length === 0) { alert('值不能为空'); return }
+    // 每行校验 + 变量名自动续编（编辑模式仅一条）
+    const created: Array<{ name: string; project: string; variable: string; prefix: string; value: string; note: string }> = []
+    for (const val of rawValues) {
+      const formForGen = { ...form, value: val, name: rawValues.length > 1 ? `${name} ${created.length + 1}` : name, variable: '' }
+      const variable = genVariable(formForGen)
+      const existing = secretsData.secrets.find((s, i) => s.variable === variable && i !== editIdx)
+      if (existing) { alert(`变量名「${variable}」已存在，请换一个名字或手动填写变量名`); return }
+      created.push({ name: formForGen.name, project, variable, prefix: '', value: val, note: form.note })
+    }
     if (isEdit) {
       const original = secretsData.secrets[editIdx]
-      secretsData.secrets[editIdx] = { name, project, variable, prefix: '', value: form.value, note: form.note, createdAt: original.createdAt }
+      secretsData.secrets[editIdx] = { ...created[0], createdAt: original.createdAt }
     } else {
-      secretsData.secrets.push({ name, project, variable, prefix: '', value: form.value, note: form.note, createdAt: now() })
+      const nowStr = now()
+      created.forEach(c => secretsData.secrets.push({ ...c, createdAt: nowStr }))
     }
     saveData()
     teardownEdit()
@@ -576,15 +592,18 @@ export function apply(ctx: any) {
 .dsh-verypass-close-btn:hover{background:var(--dsw-alias-bg-hover,#333);color:var(--dsw-alias-label-primary,#fff)}
 .dsh-verypass-modal-body{padding:16px 20px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
 .dsh-verypass-list{display:flex;flex-direction:column;gap:8px}
-.dsh-verypass-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--dsw-alias-bg-layer-3,#2c2c2e);border-radius:10px;transition:background .12s}
+.dsh-verypass-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:var(--dsw-alias-bg-layer-3,#2c2c2e);border-radius:10px;transition:background .12s;box-sizing:border-box;width:100%;min-width:0}
 .dsh-verypass-row:hover{background:var(--dsw-alias-bg-hover,#333)}
-.dsh-verypass-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.dsh-verypass-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.dsh-verypass-row-header{display:flex;align-items:center;gap:6px;min-width:0}
 .dsh-verypass-row-name{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dsh-verypass-row-meta{display:flex;align-items:center;gap:8px;font-size:11px}
-.dsh-verypass-row-meta code{font-size:10px;color:var(--dsw-alias-brand-primary,#4c78ff);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4c78ff) 12%,transparent);padding:1px 5px;border-radius:3px;white-space:nowrap}
-.dsh-verypass-row-val{font-family:monospace;color:var(--dsw-alias-label-tertiary,#999)}
-.dsh-verypass-row-note{color:var(--dsw-alias-label-tertiary,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+.dsh-verypass-row-meta{display:flex;align-items:center;gap:8px;font-size:11px;min-width:0;overflow:hidden}
+.dsh-verypass-row-meta code{font-size:10px;color:var(--dsw-alias-brand-primary,#4c78ff);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4c78ff) 12%,transparent);padding:1px 5px;border-radius:3px;white-space:nowrap;flex:none}
+.dsh-verypass-row-val{font-family:monospace;color:var(--dsw-alias-label-tertiary,#999);flex:none}
+.dsh-verypass-row-note{color:var(--dsw-alias-label-tertiary,#999);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;flex:none}
 .dsh-verypass-row-actions{display:flex;gap:4px;flex:none}
+.dsh-verypass-varlist-btn{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;padding:4px 10px;font-size:11px;line-height:16px;color:var(--dsw-alias-brand-primary,#4c78ff);background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4c78ff) 8%,transparent);border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary,#4c78ff) 30%,transparent);border-radius:8px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.dsh-verypass-varlist-btn:hover{background:color-mix(in srgb,var(--dsw-alias-brand-primary,#4c78ff) 16%,transparent);border-color:var(--dsw-alias-brand-primary,#4c78ff)}
 .dsh-verypass-btn{width:28px;height:28px;border-radius:6px;border:none;background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--dsw-alias-label-tertiary,#999);transition:background .12s,color .12s}
 .dsh-verypass-btn:hover{background:var(--dsw-alias-bg-hover,#333);color:var(--dsw-alias-label-primary,#fff)}
 .dsh-verypass-del-btn:hover{color:var(--dsw-alias-state-error-primary,#ef4444)}
