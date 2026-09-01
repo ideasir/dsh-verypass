@@ -154,6 +154,41 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
+/** 把文字注入 DSH 输入框（React 虚拟 DOM 兼容） */
+function injectIntoInput(v: string): boolean {
+  const ta = document.querySelector<HTMLTextAreaElement>('textarea[data-phase]')
+  if (!ta) return false
+  try {
+    const tracker = (ta as any)._valueTracker
+    if (tracker) tracker.setValue('')
+    const protoSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set
+    if (protoSetter) {
+      protoSetter.call(ta, v)
+      ta.dispatchEvent(new Event('input', { bubbles: true }))
+    } else {
+      ta.value = v
+    }
+    const syncBackdrop = () => {
+      const cont = ta.parentElement
+      const backdrop = cont ? [...cont.querySelectorAll('*')].find((el: any) => el.className && String(el.className).includes('backdrop')) : null
+      if (backdrop && backdrop.textContent !== v) {
+        if (tracker) tracker.setValue('')
+        if (protoSetter) {
+          protoSetter.call(ta, v)
+          ta.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      }
+    }
+    setTimeout(syncBackdrop, 100)
+    setTimeout(syncBackdrop, 500)
+  } catch {
+    ta.value = v
+  }
+  ta.focus()
+  try { ta.setSelectionRange(v.length, v.length) } catch { /* ignore */ }
+  return true
+}
+
 /** 一个「变量列表」展开按钮的 SVG（列表图标） */
 const ListSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
 
@@ -702,6 +737,28 @@ function VeryPassPluginCard() {
   const [open, setOpen] = React.useState(false)
   const [enabled, setEnabled] = React.useState(secretsData.enabled)
   const [feedback, setFeedback] = React.useState<string | null>(null)
+  const [hasUpdate, setHasUpdate] = React.useState(false)
+  const [checking, setChecking] = React.useState(false)
+
+  // 挂载时检查一次更新
+  React.useEffect(() => {
+    let alive = true
+    fetch('/plugins/dsh-verypass/update', { cache: 'no-store' })
+      .then(r => r.json()).then((d: any) => {
+        if (alive && d?.ok) setHasUpdate(!!d.hasUpdate)
+      }).catch(() => { /* 保守无更新 */ })
+    return () => { alive = false }
+  }, [])
+
+  const checkUpdate = () => {
+    if (checking) return
+    setChecking(true)
+    fetch('/plugins/dsh-verypass/update', { cache: 'no-store' })
+      .then(r => r.json()).then((d: any) => {
+        if (d?.ok) setHasUpdate(!!d.hasUpdate)
+      }).catch(() => { /* 保守无更新 */ })
+      .finally(() => setChecking(false))
+  }
 
   const toggle = () => {
     const newVal = !enabled
@@ -730,10 +787,13 @@ function VeryPassPluginCard() {
           onMouseEnter: (e: any) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent)' },
           onMouseLeave: (e: any) => { e.currentTarget.style.background = 'var(--dsw-alias-bg-layer-1)' },
         }, '卸载'),
-        React.createElement('button', { type: 'button', className: 'dsh-mm-btn-update', style: { color: 'var(--dsw-alias-label-tertiary)' }, onClick: (e: any) => e.stopPropagation(), title: '当前已是最新版本',
+        React.createElement('button', { type: 'button', className: 'dsh-mm-btn-update',
+          onClick: (e: any) => { e.stopPropagation(); if (hasUpdate) { injectIntoInput('更新当前插件为最新版本') } else { checkUpdate() } },
+          title: hasUpdate ? '发现新版本，点击后会在输入框生成更新提示词' : (checking ? '检测中…' : '当前已是最新版本（点击重新检查）'),
+          style: { color: hasUpdate ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-label-tertiary)', border: `1px solid ${hasUpdate ? 'color-mix(in srgb, var(--dsw-alias-state-success-primary) 45%, transparent)' : 'var(--dsw-alias-border-l2)'}` },
           onMouseEnter: (e: any) => { e.currentTarget.style.background = 'color-mix(in srgb, var(--dsw-alias-brand-primary) 10%, transparent)' },
           onMouseLeave: (e: any) => { e.currentTarget.style.background = 'var(--dsw-alias-bg-layer-1)' },
-        }, '已最新'),
+        }, checking ? '检测中…' : (hasUpdate ? '有更新' : '已最新')),
         React.createElement('button', { type: 'button', className: 'dsh-mm-btn-update', style: { color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer' }, onClick: (e: any) => { e.stopPropagation(); openStats() }, title: '密码本统计',
           onMouseEnter: (e: any) => { e.currentTarget.style.color = 'var(--dsw-alias-brand-primary)'; e.currentTarget.style.borderColor = 'var(--dsw-alias-brand-primary)' },
           onMouseLeave: (e: any) => { e.currentTarget.style.color = 'var(--dsw-alias-label-secondary)'; e.currentTarget.style.borderColor = 'var(--dsw-alias-border-l2)' },

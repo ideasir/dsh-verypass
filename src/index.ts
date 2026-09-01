@@ -44,6 +44,10 @@ const storePath = path.join(dshHome, '.verypass.json')
 const keyPath = path.join(dshHome, '.verypass.key')
 const legacyStorePath = path.join(dshHome, '.passpass.json')
 const legacyKeyPath = path.join(dshHome, '.passpass.key')
+const PROFILE_DIR = path.join(dshHome, 'profiles', 'web')
+const NM_DIR = path.join(PROFILE_DIR, 'node_modules')
+const SELF = 'dsh-verypass'
+const GITHUB_RAW = 'https://ghfast.top/https://raw.githubusercontent.com/ideasir/dsh-verypass/main/package.json'
 const defaultData: VaultData = { enabled: true, secrets: [] }
 const REDACT = '[REDACTED]'
 
@@ -296,6 +300,32 @@ export function apply(ctx: any, config: any = {}) {
         } catch (e: any) {
           res.writeHead(500, { 'content-type': 'application/json' })
           res.end(JSON.stringify({ error: e?.message ?? 'save failed' }))
+        }
+      },
+    })
+    // 检查更新：对比本地版本与 GitHub 远端 package.json 版本
+    ctx.webServer.register({
+      kind: 'exact', path: '/plugins/dsh-verypass/update',
+      handler: async (_req: IncomingMessage, res: ServerResponse) => {
+        try {
+          let localVersion = ''
+          try {
+            const pkgPath = path.join(NM_DIR, SELF, 'package.json')
+            localVersion = JSON.parse(await readFile(pkgPath, 'utf-8')).version ?? ''
+          } catch { /* 读不到本地版本则空 */ }
+          let remoteVersion = '', hasUpdate = false
+          try {
+            const resp = await fetch(GITHUB_RAW, { signal: AbortSignal.timeout(8_000) })
+            if (resp.ok) {
+              remoteVersion = ((await resp.json() as any).version) ?? ''
+              hasUpdate = remoteVersion !== '' && remoteVersion !== localVersion
+            }
+          } catch { /* 网络不可达保守无更新 */ }
+          res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
+          res.end(JSON.stringify({ ok: true, hasUpdate, remoteVersion, localVersion }))
+        } catch (e: any) {
+          res.writeHead(500, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, error: e?.message ?? 'update check failed' }))
         }
       },
     })
