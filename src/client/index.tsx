@@ -236,7 +236,7 @@ function renderVaultListHtml(): string {
       <div class="dsh-verypass-row-actions">
         <button class="dsh-verypass-btn" data-action="copy" data-index="${idx}" title="复制明文">${CopySvg}</button>
         <button class="dsh-verypass-btn" data-action="edit" data-index="${idx}" title="编辑">${EditSvg}</button>
-        <button class="dsh-verypass-btn" data-action="del" data-index="${idx}" title="删除">${TrashSvg}</button>
+        <button class="dsh-verypass-btn" data-action="del-project" data-project="${escapeHtml(g.project)}" data-count="${g.entries.length}" title="删除整个项目">${TrashSvg}</button>
       </div>
     </div>`
   }).join('')
@@ -348,6 +348,10 @@ function bindVaultEvents(overlay: HTMLElement) {
       openVarlist(project)
       return
     }
+    if (action === 'del-project') {
+      delProject(t.getAttribute('data-project') || '', overlay)
+      return
+    }
     const idx = parseInt(t.getAttribute('data-index') ?? '-1', 10)
     if (action === 'copy') { copySecret(idx, t); return }
     if (action === 'edit') { if (idx >= 0) openEditModal(idx, overlay); return }
@@ -398,6 +402,21 @@ function confirmModal(msg: string): Promise<boolean> {
       el.remove()
       resolve(b.getAttribute('data-confirm-action') === 'ok')
     })
+  })
+}
+
+/** 按项目删除：删除整个项目（含所有 Key） */
+function delProject(project: string, overlay: HTMLElement) {
+  const entries = secretsData.secrets.filter(s => (s.project || '默认') === project)
+  if (entries.length === 0) return
+  void confirmModal(`确定删除整个项目「${escapeHtml(project)}」（${entries.length} 个 Key）？`).then(ok => {
+    if (!ok) return
+    entries.forEach(e => {
+      const i = secretsData.secrets.indexOf(e)
+      if (i >= 0) secretsData.secrets.splice(i, 1)
+    })
+    saveData()
+    refreshVault(overlay)
   })
 }
 
