@@ -1,8 +1,8 @@
 node_modules/
 
 # Local credentials and runtime data
-.passpass.json
-.passpass.key
+.verypass.json
+.verypass.key
 .env
 .env.*
 !.env.example
@@ -16,3 +16,4 @@ node_modules/
 .tmp/
 
 # Keep published build outputs tracked; lib/ and dist/ are intentionally excluded from this rule.
+*.bak

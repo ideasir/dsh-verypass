@@ -1,5 +1,5 @@
 /**
- * dsh-passpass client bundle (tsdown). Same pattern as dsh-makemake.
+ * dsh-verypass client bundle (tsdown). Same pattern as dsh-makemake.
  */
 
 const CLIENT_EXTERNALS = [
@@ -15,7 +15,7 @@ const CLIENT_EXTERNALS = [
 ] as const
 
 export default {
-  name: 'dsh-passpass/client',
+  name: 'dsh-verypass/client',
   entry: { client: 'src/client/index.tsx' },
   outDir: 'lib',
   format: 'cjs',
@@ -32,7 +32,7 @@ export default {
   noExternal: (id: string) => (CLIENT_EXTERNALS.includes(id) ? undefined : true),
   outputOptions: {
     entryFileNames: 'client.js',
-    banner: 'window.__ModuleLoader__.load({ id: "dsh-passpass", factory: (require) => {',
+    banner: 'window.__ModuleLoader__.load({ id: "dsh-verypass", factory: (require) => {',
     footer: 'return module.exports; } });',
     intro: 'var module = { exports: {} }; var exports = module.exports;',
   },

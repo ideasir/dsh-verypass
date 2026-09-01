@@ -1,4 +1,4 @@
-# dsh-passpass 开发文档
+# dsh-verypass 开发文档
 
 > **UI 规范：** 图标（Lucide 24×24 stroke-2）、主题（CSS 变量）、卡片结构（dsh-mm-*）统一遵循
 > `/vol1/1000/DeepSeek/DSH-UI-SPEC.md` —— 所有 ideasir 插件必须遵守，禁止硬编码颜色/非标准图标。
@@ -55,8 +55,8 @@ npm run build:client  # tsdown 构建浏览器 bundle
 
 1. 从 `${DSH_HOME}` 定位数据和密钥文件；
 2. 使用 AES-256-GCM 对凭据值加密/解密；
-3. 注册 `passpass` settings namespace；
-4. 注册 `/plugins/dsh-passpass/list` 和 `/plugins/dsh-passpass/save`；
+3. 注册 `verypass` settings namespace；
+4. 注册 `/plugins/dsh-verypass/list` 和 `/plugins/dsh-verypass/save`；
 5. 注册四个 Agent 工具；
 6. 将工具输出中的凭据及常见编码变体替换为 `[REDACTED]`。
 
@@ -104,7 +104,7 @@ npm run build:client  # tsdown 构建浏览器 bundle
 
 ### 修改客户端时的注意事项
 
-- `localStorage` key 为 `dsh-passpass-data`；
+- `localStorage` key 为 `dsh-verypass-data`；
 - 所有用户输入进入 HTML 前必须经过 `escapeHtml`；
 - UI 事件应使用当前弹窗的事件代理，避免重复绑定；
 - 新增/编辑/删除后要同时更新本地缓存和服务端；
@@ -116,19 +116,19 @@ npm run build:client  # tsdown 构建浏览器 bundle
 启动 DSH Web Profile 后，检查：
 
 ```bash
-curl -sS http://127.0.0.1:3080/plugins/dsh-passpass/list
+curl -sS http://127.0.0.1:3080/plugins/dsh-verypass/list
 curl -sS -o /dev/null -w '%{http_code}\n' \
-  http://127.0.0.1:3080/plugins/dsh-passpass/client.js
+  http://127.0.0.1:3080/plugins/dsh-verypass/client.js
 ```
 
 安全检查要求：
 
 - `/list` 返回中不能出现 `value` 字段；
 - `/list` 的 `masked` 应为固定宽度遮罩；
-- `.passpass.json` 中所有值应以 `enc:` 开头；
+- `.verypass.json` 中所有值应以 `enc:` 开头；
 - `list_secrets` 和 `resolve_secret` 不得返回明文；
 - `credential_exec` / `credential_http` 的输出必须执行 redact；
-- 关闭 PassPass 后四个工具应不再出现在工具注册表中。
+- 关闭 VeryPass 后四个工具应不再出现在工具注册表中。
 
 语法检查：
 
@@ -151,16 +151,16 @@ node --check lib/client.js
 
 ## 8. 安全发布检查清单
 
-- [ ] 不提交 `.passpass.json`、`.passpass.key` 或任何真实凭据；
+- [ ] 不提交 `.verypass.json`、`.verypass.key` 或任何真实凭据；
 - [ ] 不把测试 token 写入源码、README、日志或提交信息；
 - [ ] `/list` 不返回 `value` 明文；
 - [ ] `/save` 缺失 `value` 时保留已有服务端值；
 - [ ] 服务端工具输出只包含脱敏值；
-- [ ] `.passpass.key` 权限为 `0600`；
+- [ ] `.verypass.key` 权限为 `0600`；
 - [ ] 生产环境的 Agent sandbox 不应允许直接读取 DSH 密钥文件；
 - [ ] 生产环境应限制 Agent 对本机 DSH Web 管理端点的直接访问；
 - [ ] 发布前执行构建和运行时回归检查。
 
 ## 9. 已知边界
 
-PassPass 是 DSH 的本地插件，不是独立的操作系统密码管理器。若运行 Agent 拥有 root 权限、能读取 `${DSH_HOME}/.passpass.key`，或能直接访问并调用本机 Web 管理接口，则插件无法单独保证明文对该进程不可见。真正的进程隔离必须由 DSH sandbox、系统权限和网络策略提供。
+VeryPass 是 DSH 的本地插件，不是独立的操作系统密码管理器。若运行 Agent 拥有 root 权限、能读取 `${DSH_HOME}/.verypass.key`，或能直接访问并调用本机 Web 管理接口，则插件无法单独保证明文对该进程不可见。真正的进程隔离必须由 DSH sandbox、系统权限和网络策略提供。

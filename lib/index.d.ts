@@ -1,7 +1,9 @@
 export declare const inject: string[];
 interface SecretEntry {
     name: string;
+    project: string;
     variable: string;
+    prefix: string;
     value: string;
     note: string;
     createdAt: string;
