@@ -71,7 +71,7 @@ npm run build --prefix /path/to/dsh-verypass
 | `${DSH_HOME}/.verypass.json` | 加密后的凭据数据 |
 | `${DSH_HOME}/.verypass.key` | 32 字节 AES 密钥的十六进制表示，权限应为 `0600` |
 
-> 从旧名 `dsh-passpass` 升级时，插件会在首次启动自动把 `.passpass.json` / `.passpass.key` 迁移到 `.verypass.json` / `.verypass.key`（旧文件保留备份）。
+> 凭据数据文件：`${DSH_HOME}/.verypass.json`（加密数据）、`${DSH_HOME}/.verypass.key`（AES 密钥）。
 
 建议通过环境变量注入固定密钥，便于备份和迁移：
 
@@ -83,7 +83,7 @@ export DSH_VERYPASS_KEY='<64 hexadecimal characters>'
 
 ## 版本
 
-当前版本：`0901-0.1.2-alpha.3`
+当前版本：`0904-0.1.2-alpha.3`
 
 项目地址：<https://for.very.im/EVAN/dsh-verypass>
 

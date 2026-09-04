@@ -42,8 +42,6 @@ interface VaultData {
 const dshHome = process.env.DSH_HOME ?? '/root/.dsh'
 const storePath = path.join(dshHome, '.verypass.json')
 const keyPath = path.join(dshHome, '.verypass.key')
-const legacyStorePath = path.join(dshHome, '.passpass.json')
-const legacyKeyPath = path.join(dshHome, '.passpass.key')
 const PROFILE_DIR = path.join(dshHome, 'profiles', 'web')
 const NM_DIR = path.join(PROFILE_DIR, 'node_modules')
 const SELF = 'dsh-verypass'
@@ -134,34 +132,8 @@ function redact(text: string, extra: string[] = []): string {
   return text
 }
 
-// 一次性迁移：新文件名不存在但旧 .passpass 文件存在时，复制旧 .passpass 数据到新 .verypass 文件名。
-// 保留旧文件不动（只读复制），确保任何回滚或误删都可通过旧文件找回。
-async function ensureMigrated() {
-  // 1) 迁移密钥文件（先迁移 key，否则旧数据无法解密）
-  try {
-    await readFile(keyPath)
-  } catch {
-    try {
-      const legacyKey = await readFile(legacyKeyPath)
-      await mkdir(path.dirname(keyPath), { recursive: true })
-      await writeFile(keyPath, legacyKey, { mode: 0o600 })
-    } catch { /* 无旧密钥，忽略 */ }
-  }
-  // 2) 迁移数据文件
-  try {
-    await readFile(storePath)
-  } catch {
-    try {
-      const legacyData = await readFile(legacyStorePath)
-      await mkdir(path.dirname(storePath), { recursive: true })
-      await writeFile(storePath, legacyData, { mode: 0o600 })
-    } catch { /* 无旧数据，忽略 */ }
-  }
-}
-
 // ── 加载 / 保存（value 加密落盘，内存始终明文） ──────────
 async function loadData(): Promise<VaultData> {
-  await ensureMigrated()
   try {
     const raw = await readFile(storePath, 'utf-8')
     const parsed = JSON.parse(raw) as VaultData
@@ -284,8 +256,7 @@ export function apply(ctx: any, config: any = {}) {
             if (!raw || typeof raw.name !== 'string' || typeof raw.variable !== 'string') continue
             const name = raw.name.trim()
             const variable = raw.variable.trim()
-            if (!name || !variable || seen.has(variable)) continue
-            seen.add(variable)
+            if (!name || !variable) continue
             const old = previousByVariable.get(variable)
             // value 缺失时保留服务端已有明文；仅新增条目必须明确提交 value。
             const rawValue = typeof raw.value === 'string' ? raw.value : old?.value

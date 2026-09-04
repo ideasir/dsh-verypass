@@ -1,6 +1,6 @@
 {
   "name": "dsh-verypass",
-  "version": "0901-0.1.2-alpha.3",
+  "version": "0904-0.1.2-alpha.3",
   "description": "Password vault plugin for DeepSeek Harness — manage secrets with masked display.",
   "type": "module",
   "main": "lib/index.js",

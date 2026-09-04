@@ -39,12 +39,6 @@ let activeEditSave: (() => void) | null = null
 let activeEditClose: (() => void) | null = null
 
 function loadData(): SecretsData {
-  // 一次性迁移：新键缺失但旧键存在时，把浏览器本地明文工作副本迁到新键，避免复制按钮失效。
-  if (!localStorage.getItem('dsh-verypass-data')) {
-    const legacy = localStorage.getItem('dsh-passpass-data')
-    if (legacy) localStorage.setItem('dsh-verypass-data', legacy)
-  }
-
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw) as SecretsData
@@ -707,10 +701,6 @@ export function apply(ctx: any) {
       const settingsArea = document.querySelector<HTMLElement>('[class*="hHd-Xa_settingsArea"]')
       if (!settingsArea) return null
 
-      // 无条件清理旧版残留的 .dsh-passpass-lock-btn（改名前的 bundle 注入的）
-      // 放在查重之前：无论新版按钮是否已注入，只要 DOM 里出现旧按钮就移除
-      settingsArea.querySelectorAll('.dsh-passpass-lock-btn').forEach(el => el.remove())
-
       // 已经注入过新版锁就跳过
       if (settingsArea.querySelector('.dsh-verypass-lock-btn')) return true
 
@@ -791,7 +781,7 @@ function syncLockVisibility() {
 }
 
 // ── 设置页插件卡片（复用 dsh-mm-* CSS，与 makemake 完全一致） ─────────
-const VERSION = '0901-0.1.2-alpha.3'
+const VERSION = '0904-0.1.2-alpha.3'
 const REPO_URL = 'https://github.com/ideasir/dsh-verypass'
 
 // Chevron 用 primitives 的 IconChevronDownOutline14（与 makemake 一致）
